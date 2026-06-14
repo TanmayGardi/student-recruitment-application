@@ -1,4 +1,4 @@
-# FastAPI JWT Auethentication
+# FastAPI JWT Authentication
 
 ## 1. Setting up your Virtual Environment
 ## 2. Password Hashing
