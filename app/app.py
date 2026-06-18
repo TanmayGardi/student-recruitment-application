@@ -1,67 +1,90 @@
-from fastapi import FastAPI, status, HTTPException, Depends
+"""
+FastAPI Student Placement & Recruitment Platform
+================================================
+A production-ready placement portal with JWT authentication, role-based access,
+and AI-powered features via Google Gemini.
+
+Roles:
+  - student   → upload resume, apply to jobs, get AI job recommendations
+  - recruiter → post jobs, search students, AI-rank candidates
+
+Run with:
+    uvicorn app.app:app --reload
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from app.schemas import UserOut, UserAuth, TokenSchema
-from fastapi.security import OAuth2PasswordRequestForm
-from app.utils import (
-    get_hashed_password,
-    create_access_token,
-    create_refresh_token,
-    verify_password
+
+from app.database import engine, Base
+from app.routers import auth, students, recruiters, jobs, ai
+
+# ── Create all database tables on startup ──────────────────────────────────────
+Base.metadata.create_all(bind=engine)
+
+# ── App instance ──────────────────────────────────────────────────────────────
+app = FastAPI(
+    title="🎓 Student Placement & Recruitment Platform",
+    description="""
+## Welcome to the AI-Powered Placement Portal 🚀
+
+### For Students
+- **Register** as a student and build your profile
+- **Upload** your PDF resume — our AI will parse and extract your skills automatically
+- **Browse** job listings and apply with a cover note
+- **Get AI recommendations** for the best-fit jobs
+- **Identify skill gaps** between your profile and any job requirement
+- **Generate** a professional recruiter-facing summary with AI
+
+### For Recruiters
+- **Register** as a recruiter and set up your company profile
+- **Post** detailed job listings with required skills and role preferences
+- **Search & filter** students by skills, CGPA, college, graduation year
+- **AI-rank** all applicants for a job — get a 0–100 match score with reasoning
+- **Manage** applicant statuses (shortlist, reject, hire)
+
+### Authentication
+All protected endpoints require a Bearer token in the `Authorization` header.
+Use the **Authorize** button (🔒) in Swagger UI and enter your token.
+
+### AI Features (requires `GEMINI_API_KEY` in `.env`)
+Get a free key at https://aistudio.google.com/app/apikey
+    """,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    contact={
+        "name": "Placement Platform",
+        "url": "https://github.com",
+    },
 )
 
-from uuid import uuid4 
+# ── CORS Middleware ────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],       # Restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app = FastAPI()
-users_db = {}
+# ── Include Routers ────────────────────────────────────────────────────────────
+app.include_router(auth.router)
+app.include_router(students.router)
+app.include_router(recruiters.router)
+app.include_router(jobs.router)
+app.include_router(ai.router)
 
-@app.post('/signup', summary="Create new user", response_model=UserOut)
-async def create_user(data: UserAuth):
-    # querying database to check if user already exist
-    user = users_db.get(data.email, None)
-    if user is not None:
-            raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exist"
-        )
-    user = {
-        'email': data.email,
-        'password': get_hashed_password(data.password),
-        'id': str(uuid4()),
-        "username": data.username
-    }
-    users_db[data.email] = user    # saving user to database
-    return UserOut(id=user["id"],
-                   email=user["email"],
-                   username=user["username"])
 
-@app.post('/login', summary="Create access and refresh tokens for user", response_model=TokenSchema)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = users_db.get(form_data.username)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User not found!"
-        )
+# ── Root Redirect ──────────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+def root():
+    """Redirect root to Swagger UI."""
+    return RedirectResponse(url="/docs")
 
-    hashed_pass = user['password']
-    if not verify_password(form_data.password, hashed_pass):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password"
-        )
 
-    return {
-        "access_token": create_access_token(user['email']),
-        "refresh_token": create_refresh_token(user['email']),
-    }
-
-@app.get("/users", response_model=list[UserOut])
-async def get_users():
-    return [
-        {
-            "id": user["id"],
-            "username": user["username"],
-            "email": user["email"]
-        }
-        for user in users_db.values()
-    ]
+# ── Health Check ──────────────────────────────────────────────────────────────
+@app.get("/health", tags=["System"], summary="Health check")
+def health_check():
+    """Returns service health status."""
+    return {"status": "healthy", "service": "Placement Platform API", "version": "1.0.0"}
