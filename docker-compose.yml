@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    image: placement-portal:latest
+    container_name: placement_portal_app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////workspace/placement.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-super-secret-jwt-key-change-in-production-32chars}
+      - JWT_REFRESH_SECRET_KEY=${JWT_REFRESH_SECRET_KEY:-super-secret-refresh-key-change-in-production-32c}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-1097470031137-i0obuim3o0136obi3rck3u12fjb5c8d6.apps.googleusercontent.com}
+    volumes:
+      - ./placement.db:/workspace/placement.db
+      - ./uploads:/workspace/uploads
+    restart: always
