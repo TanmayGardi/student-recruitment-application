@@ -288,3 +288,92 @@ class AISkillGapResult(BaseModel):
 class AISummaryResult(BaseModel):
     student_id: str
     summary: str
+
+
+# ─── Mock Interview Schemas ───
+class InterviewQuestion(BaseModel):
+    question_id: int
+    question: str
+
+
+class InterviewQuestionsRequest(BaseModel):
+    job_id: str
+
+
+class InterviewQuestionsResponse(BaseModel):
+    job_id: str
+    job_title: str
+    questions: List[InterviewQuestion]
+
+
+class AnswerSubmission(BaseModel):
+    question_id: int
+    question: str
+    answer: str
+
+
+class InterviewEvaluationRequest(BaseModel):
+    job_id: str
+    answers: List[AnswerSubmission]
+
+
+class QuestionEvaluation(BaseModel):
+    question_id: int
+    question: str
+    score: int
+    feedback: str
+
+
+class InterviewEvaluationResponse(BaseModel):
+    overall_score: int
+    overall_feedback: str
+    evaluations: List[QuestionEvaluation]
+
+
+# ─── Recruiter Analytics Schemas ───
+class SkillDistribution(BaseModel):
+    skill: str
+    count: int
+
+
+class RecruiterAnalyticsOut(BaseModel):
+    total_jobs: int
+    total_applications: int
+    average_cgpa: Optional[float] = None
+    top_skills: List[SkillDistribution] = []
+
+
+# ─── Mock Interview History/Details Schemas ───
+class MockInterviewHistoryOut(BaseModel):
+    id: str
+    job_title: str
+    company_name: Optional[str] = None
+    overall_score: Optional[int] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MockInterviewDetailOut(BaseModel):
+    id: str
+    job_id: str
+    job_title: str
+    company_name: Optional[str] = None
+    questions: List[Any] = []
+    answers: List[Any] = []
+    evaluations: List[Any] = []
+    overall_score: Optional[int] = None
+    overall_feedback: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Forgot Password Schemas ───
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str

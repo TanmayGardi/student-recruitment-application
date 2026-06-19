@@ -1,0 +1,3 @@
+[2026-06-18T18:34:22.904408] Password reset request for student1@example.com: http://localhost:8000/?reset_token=31ff1425-17d7-4fab-9349-183865187d05
+[2026-06-18T18:34:47.855679] Password reset request for student1@example.com: http://localhost:8000/?reset_token=c63f621d-6f31-4e0f-91cd-1697c7f6eca0
+[2026-06-18T18:34:47.946336] Password reset request for student1@example.com: http://localhost:8000/?reset_token=4dbc6c84-bfce-4cb1-8380-a75f8584a6cd

@@ -38,6 +38,8 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    reset_token = Column(String, nullable=True, index=True)
+    reset_token_expires = Column(DateTime, nullable=True)
 
     # Relationships
     student_profile = relationship("StudentProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -74,6 +76,7 @@ class StudentProfile(Base):
     user = relationship("User", back_populates="student_profile")
     resume = relationship("Resume", back_populates="student", uselist=False, cascade="all, delete-orphan")
     applications = relationship("Application", back_populates="student", cascade="all, delete-orphan")
+    mock_interviews = relationship("MockInterview", back_populates="student", cascade="all, delete-orphan")
 
     @property
     def skills(self):
@@ -201,3 +204,23 @@ class Application(Base):
 
     student = relationship("StudentProfile", back_populates="applications")
     job = relationship("Job", back_populates="applications")
+
+
+# ─────────────────────────────────────────────────────────────
+# Mock Interview
+# ─────────────────────────────────────────────────────────────
+class MockInterview(Base):
+    __tablename__ = "mock_interviews"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    student_id = Column(String, ForeignKey("student_profiles.id"), nullable=False)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    questions_json = Column(Text, nullable=False)     # JSON string of questions
+    answers_json = Column(Text, nullable=False)       # JSON string of answers
+    evaluation_json = Column(Text, nullable=True)     # JSON string of AI evaluation
+    overall_score = Column(Integer, nullable=True)
+    overall_feedback = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    student = relationship("StudentProfile", back_populates="mock_interviews")
+    job = relationship("Job")

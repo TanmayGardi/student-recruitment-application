@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -145,6 +146,26 @@ def get_my_resume(
     out = ResumeOut.model_validate(resume)
     out.ai_parsed_data = resume.ai_parsed_data
     return out
+
+
+@router.get("/resume/download", summary="Download your own resume PDF")
+def download_my_resume(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Serve the student's uploaded PDF resume file."""
+    profile = db.query(StudentProfile).filter(StudentProfile.user_id == current_user.id).first()
+    if not profile or not profile.resume:
+        raise HTTPException(status_code=404, detail="No resume uploaded yet")
+    filepath = profile.resume.filepath
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Resume file not found on disk")
+    return FileResponse(
+        filepath,
+        media_type="application/pdf",
+        filename=profile.resume.original_filename
+    )
+
 
 
 # ─────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ Run with:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 
 from app.database import engine, Base
 from app.routers import auth, students, recruiters, jobs, ai
@@ -76,11 +76,11 @@ app.include_router(jobs.router)
 app.include_router(ai.router)
 
 
-# ── Root Redirect ──────────────────────────────────────────────────────────────
+# ── Serve Plain HTML Frontend ──────────────────────────────────────────────────
 @app.get("/", include_in_schema=False)
 def root():
-    """Redirect root to Swagger UI."""
-    return RedirectResponse(url="/docs")
+    """Serve the plain vanilla single page application."""
+    return FileResponse("app/templates/index.html")
 
 
 # ── Health Check ──────────────────────────────────────────────────────────────

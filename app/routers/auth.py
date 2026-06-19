@@ -1,11 +1,16 @@
 import os
+import uuid
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User, StudentProfile, RecruiterProfile
-from app.schemas import UserAuth, UserOut, TokenSchema, RefreshTokenRequest
+from app.schemas import (
+    UserAuth, UserOut, TokenSchema, RefreshTokenRequest,
+    ForgotPasswordRequest, ResetPasswordRequest
+)
 from app.utils import (
     get_hashed_password,
     verify_password,
@@ -172,3 +177,59 @@ def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_db)):
         "access_token": create_access_token(user.email),
         "refresh_token": create_refresh_token(user.email),
     }
+
+
+@router.post(
+    "/forgot-password",
+    summary="Request a password reset link",
+)
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Generates a secure reset token valid for 15 minutes, saves it, and returns the reset link (mocking email)."""
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found with this email address")
+    
+    # Generate token
+    token = str(uuid.uuid4())
+    expiration = datetime.utcnow() + timedelta(minutes=15)
+    
+    user.reset_token = token
+    user.reset_token_expires = expiration
+    db.commit()
+    
+    # Log it to reset_links.log for demo/testing
+    log_file = "reset_links.log"
+    reset_link = f"http://localhost:8000/?reset_token={token}"
+    
+    with open(log_file, "a") as f:
+        f.write(f"[{datetime.utcnow().isoformat()}] Password reset request for {user.email}: {reset_link}\n")
+        
+    return {
+        "message": "Password reset link generated successfully. (Demo mode: link returned below & written to reset_links.log)",
+        "reset_token": token,
+        "reset_link": reset_link
+    }
+
+
+@router.post(
+    "/reset-password",
+    summary="Reset password using reset token",
+)
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Verifies the token and resets the user's password."""
+    user = db.query(User).filter(User.reset_token == body.token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+    # Check expiration
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+        
+    # Reset password
+    user.hashed_password = get_hashed_password(body.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    
+    return {"message": "Password has been reset successfully. You can now log in with your new password."}
+
